@@ -23,7 +23,7 @@
 
     Runs the script with the default settings: -ScanRange 1..255 -Networks @('192.168.0.','192.168.1.') -Ports @(20, 21, 22, 23, 25, 53, 67, 68, 69, 80, 135, 137, 138, 139, 161, 162, 515, 443, 445, 631, 1720, 1900, 5000, 9100)
 .EXAMPLE
-    Get-OpenServices.ps1 -ScanRange 1..64 -Networks @('10.0.1.','10.0.2.','10.0.3.') -Ports @(21, 22, 23, 25, 80)
+    Get-OpenServices.ps1 -ScanRange (1..64) -Networks @('10.0.1.','10.0.2.','10.0.3.') -Ports @(21, 22, 23, 25, 80)
 
     Runs the script to scan the 10.0.1.0/26, 10.0.2.0/26, and 10.0.3.0/26 networks on TCP ports usually associated with FTP, SSH, Telnet, SMTP, and HTTP.
 #>
@@ -46,17 +46,32 @@ $TargetIPs = foreach($network in $Networks) {
                 }
              }
 
+$TargetIPs
+
 $ActiveHosts = $TargetIPs | ForEach-Object { 
                                 ping -n 1 -w 100 $_ | 
                                 Select-String ttl
                             }
 
+$ActiveHosts
+
 $ActiveHostIPs = $ActiveHosts | ForEach-Object { $_.Line.Split()[2].Split(':')[0] }
 
+$ActiveHostIPs
+
+<#
 $ActiveHostIPs | ForEach-Object { 
-                    $hostIP = $_; $Ports = $_ |
+                    $hostIP = $_
+                    $Ports |
                     
                     ForEach-Object { 
-                        Write-Output ((New-Object Net.Sockets.TcpClient).Connect($hostIP, $_)) "$hostIP,$_"
-                    } 2>$null
+                        Write-Output ((New-Object Net.Sockets.TcpClient).Connect("$hostIP", $_)) "$hostIP,$_"
+                    }
                  }
+#>
+
+foreach($hostIP in $ActiveHostIPs) {
+    foreach($port in $Ports) {
+        Write-Output ((New-Object Net.Sockets.TcpClient).Connect("$hostIP", $port)) "$hostIP,$port" | Out-File -FilePath scan.csv -Encoding ascii
+    }
+}
